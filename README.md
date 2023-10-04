@@ -1,6 +1,6 @@
 # 2011Scape Drop Table Maker
 
-![1687034282183]([https://i.imgur.com/1xaiIOt.png](https://i.imgur.com/nNhfb47.gif) "drop table maker application")
+https://i.imgur.com/nNhfb47.gif
 
 Drop Table Maker is a Python application that allows you to create drop tables for game development in 2011Scape. It provides a user-friendly interface for defining item drops and their probabilities.
 
