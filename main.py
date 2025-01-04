@@ -151,7 +151,7 @@ class Application(ttk.Frame):
         guaranteed_code += '    }\n'
         main_code += '    }\n'
 
-        code += 'val table = DropTableFactory.build {\n'
+        code = 'val table = DropTableFactory.build {\n'
         code += guaranteed_code
         code += main_code
         code += '}\n\n'
