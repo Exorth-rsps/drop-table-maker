@@ -1,4 +1,6 @@
-# 2011Scape Drop Table Maker
+# Exorth Drop Table Maker
+
+## Warning the readme is not updated to the exorth version!
 
 ![python3 11_2oUlTZsLmU](https://github.com/2011Scape/drop-table-maker/assets/75695035/71f08fad-f99e-4d1c-a682-86cf3a4ef39f)
 

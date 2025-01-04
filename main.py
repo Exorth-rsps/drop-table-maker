@@ -1,107 +1,101 @@
 import sys
 import os
-
+import re
 import tkinter as tk
 from tkinter import ttk
-from tkinter import filedialog
 from tkinter import IntVar
-from ttkthemes import ThemedTk
 
 class Application(ttk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
-        self.master.title("2011Scape - Drop Table Maker by Pixel [Version 1.0]")
+        self.master.title("Exorth - Drop Table Maker by Pixel - modified by Eikenb00m")
 
-        # Get the path of the directory containing the executable or the script
-        if getattr(sys, 'frozen', False):
-            # Executable path in PyInstaller
-            base_path = sys._MEIPASS
-        else:
-            # Script path
-            base_path = os.path.dirname(os.path.abspath(__file__))
+        # Parse the items from Items.kt
+        self.item_names = self.parse_items()
 
-        # Construct the absolute file path
-        file_path = os.path.join(base_path, "Item_list.txt")
+        # Create widgets for controls (Total Slots, Add Item, Generate)
+        controls_frame = ttk.Frame(self.master)
+        controls_frame.grid(row=0, column=0, columnspan=2, sticky="ew", padx=10, pady=5)
 
-        # Load item names from file
-        try:
-            with open(file_path, 'r') as f:
-                self.item_names = [line.strip() for line in f]
-        except FileNotFoundError:
-            print("File not found:", file_path)
+        ttk.Label(controls_frame, text="Total Slots").grid(row=0, column=0, sticky="w", padx=5)
+        self.total_slots = ttk.Combobox(controls_frame, values=["256", "1", "8", "32", "128", "256", "512", "1024", "2048", "4096", "10240"], width=10)
+        self.total_slots.set("256")
+        self.total_slots.grid(row=0, column=1, padx=5)
 
-        # Create a canvas within the root window
-        self.canvas = tk.Canvas(root, width=727, height=474, bg='#999999', highlightthickness=0)
-        self.canvas.grid(row=0, column=0)
+        self.add_item = ttk.Button(controls_frame, text="Add Item", command=self.add_item_row)
+        self.add_item.grid(row=0, column=2, padx=5)
+
+        self.generate = ttk.Button(controls_frame, text="Generate", command=self.generate_code)
+        self.generate.grid(row=0, column=3, padx=5)
+
+        # Create a canvas for the item list
+        self.canvas = tk.Canvas(self.master, width=727, height=350, bg='#999999', highlightthickness=0)
+        self.canvas.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
 
         # Create a vertical scrollbar and associate it with the canvas
-        self.scrollbar = tk.Scrollbar(root, orient="vertical", command=self.canvas.yview)
-        self.scrollbar.grid(row=0, column=1, sticky='ns')
+        self.scrollbar = tk.Scrollbar(self.master, orient="vertical", command=self.canvas.yview)
+        self.scrollbar.grid(row=1, column=1, sticky='ns')
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-        # Create a frame within the canvas to hold the other widgets
+        # Create a frame within the canvas to hold other widgets
         self.inner_frame = ttk.Frame(self.canvas, borderwidth=2, relief="solid", width=690)
         self.canvas.create_window((0, 0), window=self.inner_frame, anchor='nw')
 
         # Configure the canvas to update the scroll region as the size of the inner_frame changes
         self.inner_frame.bind('<Configure>', lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
 
-        self.grid(sticky="nsew")
-        self.create_widgets()
+        # Text box to display the generated code
+        self.output_text = tk.Text(self.master, wrap="word", height=10, bg="white", fg="black", state="normal")
+        self.output_text.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=5)
+        self.output_text.insert("1.0", "Generated code will appear here...")
+        self.output_text.configure(state="disabled")  # Make read-only by default
+
+        # Configure row/column weights for resizing
+        self.master.grid_rowconfigure(1, weight=1)
+        self.master.grid_columnconfigure(0, weight=1)
+
         self.items = []
         for _ in range(1):  # Add items by default
             self.add_item_row()
 
-    def create_widgets(self):
-            ttk.Label(self, text="Total slots").grid(row=0, column=0)
-
-            self.total_slots = ttk.Combobox(self, values=["256", "1", "8", "32", "128", "256", "512", "1024", "2048", "4096", "10240"])
-            self.total_slots.set("256")  # default value
-            self.total_slots.grid(row=0, column=1)
-
-            self.add_item = ttk.Button(self, text="Add Item", command=self.add_item_row)
-            self.add_item.grid(row=0, column=2)
-
-            self.generate = ttk.Button(self, text="Generate", command=self.generate_code)
-            self.generate.grid(row=0, column=3)
+    def parse_items(self):
+        """Parse item names from Items.kt."""
+        items_file_path = "Items.kt"  # Path to Items.kt
+        item_names = []
+        try:
+            with open(items_file_path, 'r') as f:
+                content = f.read()
+                # Extract item names using regex
+                item_names = re.findall(r"const val (\w+)\s*=", content)
+        except FileNotFoundError:
+            print("Items.kt not found. Ensure it is in the same directory as this script.")
+        return item_names if item_names else ["BONES"]
 
     def add_item_row(self):
         row_num = len(self.items) + 1
-        frame = ttk.Frame(self.inner_frame)  
+        frame = ttk.Frame(self.inner_frame)
         frame.grid(row=row_num, columnspan=4)
 
-        ttk.Label(frame, text="Item Name").grid(row=row_num, column=0) 
+        ttk.Label(frame, text="Item Name").grid(row=row_num, column=0)
 
         name_entry = ttk.Combobox(frame, values=self.item_names)
         name_entry.set("BONES")  # Set the default value
         name_entry.grid(row=row_num, column=1)
 
-        # Add functionality to filter items as the user types
         def update_combobox(event):
-            # Get the current text in the combobox
             current_text = name_entry.get()
-
-            # Filter the list of item names
             filtered_items = [item for item in self.item_names if current_text.lower() in item.lower()]
-
-            # Update the values in the combobox
             name_entry['values'] = filtered_items
 
         name_entry.bind('<KeyRelease>', update_combobox)
 
-        ttk.Label(frame, text="Quantity").grid(row=row_num, column=2) 
+        ttk.Label(frame, text="Quantity").grid(row=row_num, column=2)
         quantity_entry = ttk.Entry(frame)
         quantity_entry.insert(0, "1")  # Set the default value
         quantity_entry.grid(row=row_num, column=3)
 
-        # Set style for combobox
-        style = ttk.Style()
-        style.map('TCombobox', fieldbackground=[('readonly', '#333333')])  # set the dropdown color
-        style.map('TCombobox', selectbackground=[('readonly', 'white')])  # set the selected item background color
-        style.map('TCombobox', selectforeground=[('readonly', 'black')])  # set the selected item text color
-
-        probability_entry = ttk.Combobox(frame, values=["1/8", "1/32", "1/128", "1/256", "1/512", "1/5000", "1/10000"], style='TCombobox')
+        probability_entry = ttk.Combobox(frame, values=["1/8", "1/32", "1/128", "1/256", "1/512", "1/5000", "1/10000"])
         probability_entry.set("1/28")  # Set the default value
         guaranteed = IntVar()
         chk = ttk.Checkbutton(frame, variable=guaranteed)
@@ -119,11 +113,11 @@ class Application(ttk.Frame):
 
     def remove_item(self, item):
         self.items.remove(item)
-        item[-1].destroy()  # Remove the frame of the item
+        item[-1].destroy()
 
     def calculate_slots(self, probability):
         total = int(self.total_slots.get())
-        if '/' in probability:  # If probability is entered as a fraction
+        if '/' in probability:
             numerator, denominator = map(int, probability.split('/'))
             probability = numerator / denominator
         else:
@@ -134,15 +128,13 @@ class Application(ttk.Frame):
         total_slots = self.total_slots.get()
         guaranteed_code = f'    guaranteed {{\n'
         main_code = f'    main {{\n'
-        main_code += f'        total({total_slots})\n'  # total slots function
-
+        main_code += f'        total({total_slots})\n'
 
         for item in self.items:
             name = item[0].get() if item[0].get() != "" else "BONES"
             quantity = item[1].get() if item[1].get() != "" else "1"
             probability = item[2].get() if item[2].get() != "" else "1/28"
 
-            # Check if quantity is in range format (e.g., "1-10")
             if "-" in quantity:
                 range_start, range_end = quantity.split('-')
                 quantity_kotlin = f"{range_start}..{range_end}"
@@ -150,36 +142,31 @@ class Application(ttk.Frame):
             else:
                 quantity_param = f"quantity = {quantity}"
 
-            if item[3].get():  # if it is a guaranteed drop
+            if item[3].get():
                 guaranteed_code += f'        obj(Items.{name.upper()}, {quantity_param})\n'
             else:
-                probability = item[2].get()
                 slots = self.calculate_slots(probability)
                 main_code += f'        obj(Items.{name.upper()}, {quantity_param}, slots = {slots})\n'
-        
+
         guaranteed_code += '    }\n'
         main_code += '    }\n'
 
-        code = f'import gg.rsmod.plugins.content.drops.DropTableFactory\n\n'
-        code += 'val ids = intArrayOf(Npcs.YOUR_NPC_ID)\n\n'
         code += 'val table = DropTableFactory.build {\n'
         code += guaranteed_code
         code += main_code
         code += '}\n\n'
-        self.save_code(code)
 
-    def save_code(self, code):
-        f = filedialog.asksaveasfile(mode='w', defaultextension=".plugin.kts", filetypes=(("Kotlin Script", "*.plugin.kts"), ("All files", "*.*")))
-        if f is None:  # asksaveasfile return `None` if dialog closed with "cancel".
-            return
-        f.write(code)
-        f.close()
+        self.display_code(code)
 
-root = ThemedTk(theme="elegant") 
-root.geometry("745x500")  # Set the window size
-root.resizable(False, False)  # Prevent resizing of the window
-root.attributes('-fullscreen', False)  # Prevent fullscreen
-root.configure(bg="#999999")
+    def display_code(self, code):
+        self.output_text.configure(state="normal")
+        self.output_text.delete("1.0", tk.END)
+        self.output_text.insert("1.0", code)
+        self.output_text.configure(state="disabled")
+
+root = tk.Tk()
+root.geometry("800x700")
+root.resizable(True, True)
 
 app = Application(master=root)
 app.mainloop()
